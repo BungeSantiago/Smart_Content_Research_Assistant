@@ -1,0 +1,33 @@
+# Secretos — CRÍTICO
+.env
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs y outputs locales
+logs/
+reports/
+*.log
+
+# Checkpoints de LangGraph
+*.sqlite
+*.db
+checkpoints/
