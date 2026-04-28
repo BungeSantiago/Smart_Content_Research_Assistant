@@ -45,7 +45,7 @@ class UsageEntry(BaseModel):
     input_tokens: int = 0
     output_tokens: int = 0
     estimated_cost_usd: float = 0.0
-
+    routing_reason: str | None = None
 
 class ResearchState(BaseModel):
     """

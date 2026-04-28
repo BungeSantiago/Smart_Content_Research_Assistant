@@ -9,6 +9,8 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from core.state import ResearchState, SubtopicStatus
 from core.llm import get_llm, load_prompt, ModelTier
 from core.llm_tracking import invoke_with_tracking
+from core.complexity_router import classify_curator
+
 
 
 def curator_node(state: ResearchState) -> dict:
@@ -21,7 +23,10 @@ def curator_node(state: ResearchState) -> dict:
     if not approved:
         return {"curated_content": "_No hay subtemas aprobados para curar._"}
 
-    llm = get_llm(ModelTier.COMPLEX, temperature=0.3)
+    avg_len = sum(len(s.rationale) for s in approved) // len(approved)
+    decision = classify_curator(len(approved), avg_len)
+    llm = get_llm(decision.tier, temperature=0.3)
+
     system_prompt = load_prompt("curator_system")
     language = state.language or "the same language as the subtopics"
 
@@ -48,6 +53,8 @@ def curator_node(state: ResearchState) -> dict:
         agent_name="curator",
     )
 
+    usage.routing_reason = decision.reason
+    
     return {
         "curated_content": str(response.content),
         "usage_log": [usage],

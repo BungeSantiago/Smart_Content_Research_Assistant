@@ -8,6 +8,8 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from core.state import ResearchState, Subtopic
 from core.llm import get_llm, load_prompt, ModelTier
+from core.llm_tracking import invoke_structured_with_tracking
+from core.complexity_router import classify_investigator
 
 
 class _SubtopicProposal(BaseModel):
@@ -41,11 +43,12 @@ def _detect_language(text: str) -> str:
 
 def investigator_node(state: ResearchState) -> dict:
     """Genera subtemas usando un LLM."""
-    from core.llm_tracking import invoke_structured_with_tracking
-
+    
     language = _detect_language(state.topic)
 
-    llm = get_llm(ModelTier.SIMPLE, temperature=0.5)
+    decision = classify_investigator(state.topic)
+    llm = get_llm(decision.tier, temperature=0.5)
+
     structured_llm = llm.with_structured_output(_InvestigatorOutput, method="json_mode")
 
     system_prompt = load_prompt("investigator_system")
@@ -71,6 +74,7 @@ def investigator_node(state: ResearchState) -> dict:
         ],
         agent_name="investigator",
     )
+    usage.routing_reason = decision.reason
 
     subtopics = [
         Subtopic(
