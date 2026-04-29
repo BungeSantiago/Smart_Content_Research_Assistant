@@ -7,7 +7,20 @@ from core.llm import get_llm, load_prompt, ModelTier
 from core.complexity_router import classify_investigator
 from core.llm_tracking import invoke_structured_with_tracking
 from tools.web_search import search_web, SearchResult
+from langdetect import detect, DetectorFactory, LangDetectException
 
+
+DetectorFactory.seed = 0
+_LANG_NAMES = {
+    "es": "Spanish",
+    "en": "English",
+    "pt": "Portuguese",
+    "fr": "French",
+    "it": "Italian",
+    "de": "German",
+    "ca": "Catalan",
+    "gl": "Galician",
+}
 
 class _SubtopicProposal(BaseModel):
     title: str = Field(..., min_length=3, max_length=100)
@@ -23,15 +36,22 @@ class _InvestigatorOutput(BaseModel):
 
 
 def _detect_language(text: str) -> str:
-    """Heurística simple para detectar idioma del topic."""
-    text_lower = text.lower()
-    if re.search(r"[ñáéíóúü¿¡]", text_lower):
-        return "Spanish"
-    spanish_words = {"de", "la", "el", "en", "los", "las", "para", "con", "por", "del"}
-    words = set(re.findall(r"\b\w+\b", text_lower))
-    if len(words & spanish_words) >= 2:
-        return "Spanish"
-    return "English"
+    """
+    Detecta el idioma del topic.
+
+    Usa langdetect (basado en n-gramas, soporta 55+ idiomas) en lugar de
+    heurísticas manuales. Devuelve el nombre del idioma en inglés para que
+    el LLM lo entienda sin ambigüedad.
+
+    Si el texto es muy corto o ambiguo, langdetect puede fallar; en ese caso
+    devolvemos English como fallback seguro (los modelos rinden mejor en inglés).
+    """
+    try:
+        code = detect(text)
+    except LangDetectException:
+        return "English"
+
+    return _LANG_NAMES.get(code, "English")
 
 
 def _format_sources_for_prompt(results: list[SearchResult]) -> str:

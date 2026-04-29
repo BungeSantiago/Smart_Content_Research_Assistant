@@ -13,5 +13,5 @@ python-dotenv>=1.0.0
 # Web search
 ddgs>=9.0.0
 
-# Dev (opcional, para tests)
-pytest>=8.0.0
+# Detección de idioma
+langdetect>=1.0.9
