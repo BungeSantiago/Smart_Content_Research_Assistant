@@ -24,6 +24,15 @@ def human_review_node(state: ResearchState) -> dict:
             {"id": s.id, "title": s.title, "rationale": s.rationale}
             for s in state.subtopics
         ],
+        "sources": [  # ← NUEVO
+            {
+                "title": s.title,
+                "url": s.url,
+                "snippet": s.snippet,
+                "subtopic_id": s.subtopic_id,
+            }
+            for s in state.sources
+        ],
     }
 
     # PAUSA: devuelve el control al invocador. Cuando se reanude, esto

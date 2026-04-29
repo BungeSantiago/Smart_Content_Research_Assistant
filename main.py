@@ -88,15 +88,36 @@ def _get_interrupt_payload(state_snapshot) -> dict:
 
 
 def _present_subtopics_for_review(payload: dict) -> None:
-    """Muestra los subtemas al humano con formato lindo."""
+    """Muestra los subtemas al humano con sus fuentes asociadas."""
     console.print()
+
+    subtopics = payload.get("subtopics", [])
+    sources = payload.get("sources", [])
+
+    # Indexar fuentes por subtopic_id
+    sources_by_subtopic: dict[int, list[dict]] = {}
+    for src in sources:
+        sources_by_subtopic.setdefault(src["subtopic_id"], []).append(src)
+
+    # Construir el contenido del panel
+    lines = [f"[bold]Tema:[/bold] {payload.get('topic', '')}"]
+    if sources:
+        lines.append(f"[dim]Fuentes encontradas: {len(sources)}[/dim]")
+    lines.append("")
+
+    for s in subtopics:
+        lines.append(f"  [bold cyan]{s['id']}.[/bold cyan] {s['title']}")
+        lines.append(f"     [dim]{s['rationale']}[/dim]")
+
+        related = sources_by_subtopic.get(s["id"], [])
+        if related:
+            for src in related[:3]:  # mostrar máximo 3 fuentes por subtema
+                lines.append(f"     [blue]↪[/blue] [dim italic]{src['title']}[/dim italic]")
+
+        lines.append("")
+
     console.print(Panel(
-        f"[bold]Tema:[/bold] {payload.get('topic', '')}\n\n"
-        + "\n".join(
-            f"  [bold cyan]{s['id']}.[/bold cyan] {s['title']}\n"
-            f"     [dim]{s['rationale']}[/dim]"
-            for s in payload.get("subtopics", [])
-        ),
+        "\n".join(lines).rstrip(),
         title="[bold yellow]Subtemas Propuestos — Revisá y decidí[/bold yellow]",
         border_style="yellow",
     ))

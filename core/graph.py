@@ -40,6 +40,7 @@ def build_graph():
             ("core.state", "Subtopic"),
             ("core.state", "SubtopicStatus"),
             ("core.state", "UsageEntry"),
+            ("core.state", "Source"),
         ]
     )
     checkpointer = MemorySaver(serde=serde)
