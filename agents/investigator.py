@@ -1,15 +1,3 @@
-"""
-Investigator Agent.
-
-Encuentra subtemas iniciales sobre el tema del usuario.
-
-Flujo:
-  1. Hace una búsqueda web sobre el topic.
-  2. Le pasa los resultados al LLM como contexto.
-  3. El LLM propone subtemas relevantes basados en las fuentes encontradas.
-  4. Asocia cada fuente a uno de los subtemas propuestos.
-"""
-import json
 import re
 from pydantic import BaseModel, Field
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -71,7 +59,6 @@ def investigator_node(state: ResearchState) -> dict:
 
     # 3. Armar el prompt con las fuentes como contexto
     system_prompt = load_prompt("investigator_system")
-    schema_json = json.dumps(_InvestigatorOutput.model_json_schema(), indent=2)
     sources_text = _format_sources_for_prompt(search_results)
 
     user_prompt = (
@@ -80,15 +67,24 @@ def investigator_node(state: ResearchState) -> dict:
         f"Topic to research: {state.topic}\n\n"
         f"Web search results (use these to ground your subtopics in real sources):\n\n"
         f"{sources_text}\n\n"
-        f"Generate the most relevant subtopics for this topic, written in {language}. "
+        f"Generate between 3 and 8 of the most relevant subtopics for this topic, written in {language}. "
         f"For each subtopic, list the indices of the search results that best support it "
         f"(1-based, referring to the [N] markers above). If a subtopic is not directly "
-        f"covered by any source, leave source_indices empty.\n\n"
-        f"You MUST respond with a valid JSON object that matches this schema:\n"
-        f"```json\n{schema_json}\n```\n\n"
-        f"Return ONLY the JSON object, no extra text, no markdown formatting. "
+        f"covered by any source, leave source_indices as an empty array.\n\n"
+        f"Respond with a JSON object that has a single top-level key \"subtopics\". "
+        f"Its value must be an array of objects, where each object has exactly these three fields:\n"
+        f"  - \"title\": string (between 3 and 100 characters)\n"
+        f"  - \"rationale\": string (between 10 and 300 characters)\n"
+        f"  - \"source_indices\": array of integers (1-based source indices, or empty array)\n\n"
+        f"Example of the EXACT shape expected (with placeholder content):\n"
+        f'{{"subtopics": [\n'
+        f'  {{"title": "First subtopic title", "rationale": "Why this matters.", "source_indices": [1, 3]}},\n'
+        f'  {{"title": "Second subtopic title", "rationale": "Another reason.", "source_indices": []}}\n'
+        f"]}}\n\n"
+        f"Return ONLY the JSON object, with no schema, no markdown fences, and no extra text. "
         f"Remember: all text content must be in {language}."
     )
+
 
     response, usage = invoke_structured_with_tracking(
         structured_llm=structured_llm,
