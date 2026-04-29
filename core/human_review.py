@@ -1,9 +1,3 @@
-"""
-Nodo de validación humana.
-
-Pausa el grafo, presenta los subtemas al usuario, recibe su feedback
-y actualiza los subtemas en consecuencia.
-"""
 from langgraph.types import interrupt
 from core.state import ResearchState, Subtopic, SubtopicStatus
 from core.human_parser import parse_human_input, HumanFeedback
@@ -24,7 +18,7 @@ def human_review_node(state: ResearchState) -> dict:
             {"id": s.id, "title": s.title, "rationale": s.rationale}
             for s in state.subtopics
         ],
-        "sources": [  # ← NUEVO
+        "sources": [
             {
                 "title": s.title,
                 "url": s.url,
@@ -75,7 +69,7 @@ def _apply_feedback(
         updated.append(Subtopic(
             id=next_id,
             title=title,
-            rationale="Agregado por el humano.",
+            rationale="Added by human during review",
             status=SubtopicStatus.APPROVED,
         ))
         next_id += 1

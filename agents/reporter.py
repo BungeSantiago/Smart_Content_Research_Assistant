@@ -1,9 +1,3 @@
-"""
-Reporter Agent.
-
-Genera el reporte final en markdown a partir del contenido curado.
-Siempre usa el tier COMPLEX porque es el output final visible al usuario.
-"""
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from core.state import ResearchState
@@ -16,8 +10,8 @@ def reporter_node(state: ResearchState) -> dict:
     if not state.curated_content:
         return {
             "final_report": (
-                f"# Reporte: {state.topic}\n\n"
-                f"_No hay contenido curado para reportar._"
+                f"# Report: {state.topic}\n\n"
+                f"There is no curated content to report."
             )
         }
 
@@ -29,11 +23,11 @@ def reporter_node(state: ResearchState) -> dict:
     language = state.language or "the same language as the subtopics"
 
     user_prompt = (
-        f"Tema: {state.topic}\n\n"
-        f"Contenido curado a transformar en reporte final:\n\n"
+        f"Theme: {state.topic}\n\n"
+        f"Curated content to transform into final report:\n\n"
         f"---\n{state.curated_content}\n---\n\n"
         f"IMPORTANT: Respond in {language}.\n\n"
-        f"Generá el reporte final en markdown siguiendo las instrucciones del system prompt."
+        f"Generate the final report in markdown following the system prompt instructions."
     )
 
     response, usage = invoke_with_tracking(
@@ -44,7 +38,7 @@ def reporter_node(state: ResearchState) -> dict:
         ],
         agent_name="reporter",
     )
-    
+
     usage.routing_reason = decision.reason
 
     return {

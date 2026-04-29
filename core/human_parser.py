@@ -1,13 +1,3 @@
-"""
-Parser de comandos humanos para el feedback en el ciclo de validación.
-
-Soporta comandos como:
-  - "approve 1,3"
-  - "reject 2"
-  - "modify 1 to 'AI ethical frameworks'"
-  - "add 'AI safety concerns'"
-  - Combinaciones separadas por coma: "approve 1,3, reject 2, add 'X'"
-"""
 import re
 from dataclasses import dataclass, field
 

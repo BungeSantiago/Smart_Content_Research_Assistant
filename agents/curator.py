@@ -20,7 +20,7 @@ def curator_node(state: ResearchState) -> dict:
     ]
 
     if not approved:
-        return {"curated_content": "_No hay subtemas aprobados para curar._"}
+        return {"curated_content": "There are no approved subtopics for curation."}
 
     # Métricas para el classifier
     avg_len = sum(len(s.rationale) for s in approved) // len(approved)
@@ -50,7 +50,7 @@ def curator_node(state: ResearchState) -> dict:
         related = [src for src in state.sources if src.subtopic_id == s.id]
         section = f"### {s.title}\n{s.rationale}\n"
         if related:
-            section += "\nFuentes relacionadas:\n"
+            section += "\nRelated Sources:\n"
             for src in related:
                 section += f"- {src.title} ({src.url}): {src.snippet}\n"
         sections.append(section)

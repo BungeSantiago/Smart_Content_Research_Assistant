@@ -1,8 +1,11 @@
 """
-Smart Research Assistant - Entry point.
+Smart Research Assistant - Entry point (CLI).
 
-Orquesta el grafo de LangGraph, maneja la interrupción para human-in-the-loop,
-y presenta el reporte final.
+Esta capa solo se ocupa de la presentación: pedir el topic, mostrar los
+subtemas para revisión, recolectar input humano, y mostrar el reporte
+final con el resumen de costos.
+
+La orquestación del flujo está en agents/supervisor.py.
 """
 import sys
 from dotenv import load_dotenv
@@ -10,126 +13,110 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.prompt import Prompt
-from langgraph.types import Command
 
-from core.graph import build_graph
-from core.state import ResearchState
+from agents.supervisor import Supervisor, HumanReviewRequest, ResearchResult
 from core.cost_summary import render_cost_summary
-
 
 load_dotenv()
 console = Console()
 
 
 def main() -> None:
-    # Banner
-    console.print(Panel.fit(
-        "[bold cyan]Smart Research Assistant[/bold cyan]\n"
-        "[dim]Sistema multi-agente con human-in-the-loop[/dim]",
-        border_style="cyan"
-    ))
+    _print_banner()
 
-    # Tema desde argv o prompt interactivo
-    if len(sys.argv) > 1:
-        topic = " ".join(sys.argv[1:])
-    else:
-        topic = Prompt.ask("\n[bold]¿Qué tema querés investigar?[/bold]")
-
-    if not topic.strip():
-        console.print("[red]Tema vacío. Saliendo.[/red]")
+    topic = _get_topic()
+    if not topic:
         return
-
-    # Construir el grafo
-    app = build_graph()
-    config = {"configurable": {"thread_id": "session-1"}}
-
-    # Estado inicial
-    initial_state = ResearchState(topic=topic)
 
     console.print(f"\n[dim]Investigando: [bold]{topic}[/bold]...[/dim]\n")
 
-    # PRIMERA EJECUCIÓN: corre hasta el primer interrupt()
-    result = app.invoke(initial_state, config=config)
+    # El Supervisor maneja toda la orquestación.
+    # Solo le pasamos un callback para que sepa cómo pedir input humano.
+    supervisor = Supervisor()
+    result = supervisor.run(
+        topic=topic,
+        on_human_review=_handle_human_review,
+    )
 
-    # Verificar si nos interrumpimos en human_review
-    state_snapshot = app.get_state(config)
-    if state_snapshot.next:  # hay nodos pendientes => estamos pausados
-        # Recuperar el payload que pasamos a interrupt()
-        # En LangGraph 0.2+, los interrupts viven en state_snapshot.tasks
-        interrupt_payload = _get_interrupt_payload(state_snapshot)
-
-        # Mostrar al humano
-        _present_subtopics_for_review(interrupt_payload)
-
-        # Recolectar input
-        user_input = Prompt.ask(
-            "\n[bold cyan]Tu decisión[/bold cyan]\n"
-            "[dim]Comandos: approve N,M | reject N | modify N to 'X' | add 'X'[/dim]\n"
-            "[dim]Ejemplo: approve 1,3, reject 2, add 'Casos de uso'[/dim]\n>"
-        )
-
-        # REANUDAR el grafo con el input humano
-        result = app.invoke(Command(resume=user_input), config=config)
-
-    # Mostrar el reporte final
     _show_final_report(result)
-    
-    # Mostrar el resumen de costos
-    usage_log = result.get("usage_log", [])
-    render_cost_summary(console, usage_log)
+    render_cost_summary(console, result.usage_log)
 
 
-def _get_interrupt_payload(state_snapshot) -> dict:
-    """Extrae el payload del interrupt del snapshot del estado."""
-    for task in state_snapshot.tasks:
-        if task.interrupts:
-            return task.interrupts[0].value
-    return {}
+# Capa de presentación: todo lo que tiene que ver con la CLI
+
+def _print_banner() -> None:
+    """Muestra el banner inicial."""
+    console.print(Panel.fit(
+        "[bold cyan]Smart Research Assistant[/bold cyan]\n"
+        "[dim]Multi-agent system[/dim]",
+        border_style="cyan",
+    ))
 
 
-def _present_subtopics_for_review(payload: dict) -> None:
-    """Muestra los subtemas al humano con sus fuentes asociadas."""
-    console.print()
+def _get_topic() -> str:
+    """Obtiene el topic desde args de CLI o prompt interactivo."""
+    if len(sys.argv) > 1:
+        topic = " ".join(sys.argv[1:])
+    else:
+        topic = Prompt.ask("\n[bold]What topic would you like to research?[/bold]")
 
-    subtopics = payload.get("subtopics", [])
-    sources = payload.get("sources", [])
+    topic = topic.strip()
+    if not topic:
+        console.print("[red]Topic is empty. Exiting.[/red]")
+        return ""
+    return topic
 
-    # Indexar fuentes por subtopic_id
+
+def _handle_human_review(request: HumanReviewRequest) -> str:
+    """
+    Callback invocado por el Supervisor cuando necesita input humano.
+    Esta función conoce la CLI; el Supervisor no.
+    """
+    _present_subtopics_for_review(request)
+
+    user_input = Prompt.ask(
+        "\n[bold cyan]Your Decision[/bold cyan]\n"
+        "[dim]Commands: approve N,M | reject N | modify N to 'X' | add 'X'[/dim]\n"
+        "[dim]Example: approve 1,3, reject 2, add 'Use Cases'[/dim]\n>"
+    )
+    return user_input
+
+
+def _present_subtopics_for_review(request: HumanReviewRequest) -> None:
+    """Muestra los subtemas con sus fuentes asociadas."""
     sources_by_subtopic: dict[int, list[dict]] = {}
-    for src in sources:
+    for src in request.sources:
         sources_by_subtopic.setdefault(src["subtopic_id"], []).append(src)
 
-    # Construir el contenido del panel
-    lines = [f"[bold]Tema:[/bold] {payload.get('topic', '')}"]
-    if sources:
-        lines.append(f"[dim]Fuentes encontradas: {len(sources)}[/dim]")
+    lines = [f"[bold]Topic:[/bold] {request.topic}"]
+    if request.sources:
+        lines.append(f"[dim]Sources found: {len(request.sources)}[/dim]")
     lines.append("")
 
-    for s in subtopics:
+    for s in request.subtopics:
         lines.append(f"  [bold cyan]{s['id']}.[/bold cyan] {s['title']}")
         lines.append(f"     [dim]{s['rationale']}[/dim]")
 
         related = sources_by_subtopic.get(s["id"], [])
-        if related:
-            for src in related[:3]:  # mostrar máximo 3 fuentes por subtema
-                lines.append(f"     [blue]↪[/blue] [dim italic]{src['title']}[/dim italic]")
+        for src in related[:3]:
+            lines.append(f"     [blue]↪[/blue] [dim italic]{src['title']}[/dim italic]")
 
         lines.append("")
 
+    console.print()
     console.print(Panel(
         "\n".join(lines).rstrip(),
-        title="[bold yellow]Subtemas Propuestos — Revisá y decidí[/bold yellow]",
+        title="[bold yellow]Proposed Subtopics — Review and Decide[/bold yellow]",
         border_style="yellow",
     ))
 
 
-def _show_final_report(result: dict) -> None:
-    """Muestra el reporte final renderizado en markdown."""
-    report = result.get("final_report", "(sin reporte)")
+def _show_final_report(result: ResearchResult) -> None:
+    """Muestra el reporte final renderizado."""
     console.print()
     console.print(Panel(
-        Markdown(report),
-        title="[bold green]Reporte Final[/bold green]",
+        Markdown(result.final_report or "_(no report)_"),
+        title="[bold green]Final Report[/bold green]",
         border_style="green",
     ))
 

@@ -1,15 +1,4 @@
-"""
-Classifier de complejidad para routing dinámico de modelos.
 
-Cada agente tiene un tier baseline, pero puede ajustarse dinámicamente
-según la complejidad real del trabajo. Implementa la idea del cost
-optimization del challenge: usar el modelo caro solo cuando se justifica.
-
-Las heurísticas son simples a propósito: basadas en señales objetivas
-del input. Una alternativa más sofisticada sería usar un modelo chico
-para clasificar, pero esa metaclasificación tiene su propio costo y
-latencia, lo que rompería el objetivo de optimización.
-"""
 from dataclasses import dataclass
 
 from core.llm import ModelTier
@@ -29,12 +18,12 @@ def classify_investigator(topic: str) -> RoutingDecision:
     if word_count <= 6:
         return RoutingDecision(
             tier=ModelTier.SIMPLE,
-            reason=f"Topic corto ({word_count} palabras): SIMPLE alcanza.",
+            reason=f"Short topic ({word_count} words): SIMPLE is sufficient.",
         )
 
     return RoutingDecision(
         tier=ModelTier.COMPLEX,
-        reason=f"Topic extenso ({word_count} palabras): COMPLEX para mejor comprensión.",
+        reason=f"Long topic ({word_count} words): COMPLEX is needed for better understanding.",
     )
 
 def classify_curator(
@@ -52,7 +41,7 @@ def classify_curator(
     if num_approved_subtopics == 0:
         return RoutingDecision(
             tier=ModelTier.SIMPLE,
-            reason="Sin subtemas aprobados: tier mínimo.",
+            reason="No approved subtopics: minimum tier.",
         )
 
     total_material_chars = (
@@ -69,8 +58,8 @@ def classify_curator(
         return RoutingDecision(
             tier=ModelTier.SIMPLE,
             reason=(
-                f"Carga liviana (1 subtema, {total_sources} fuentes, "
-                f"~{total_material_chars} chars de material): SIMPLE alcanza."
+                f"Light workload (1 subtopic, {total_sources} sources, "
+                f"~{total_material_chars} chars of content): SIMPLE is sufficient."
             ),
         )
 
@@ -79,17 +68,17 @@ def classify_curator(
         return RoutingDecision(
             tier=ModelTier.SIMPLE,
             reason=(
-                f"Carga moderada ({num_approved_subtopics} subtemas, "
-                f"{total_sources} fuentes, ~{total_material_chars} chars): SIMPLE alcanza."
+                f"Moderate workload ({num_approved_subtopics} subtopics, "
+                f"{total_sources} sources, ~{total_material_chars} chars): SIMPLE is sufficient."
             ),
         )
 
     return RoutingDecision(
         tier=ModelTier.COMPLEX,
         reason=(
-            f"Carga significativa ({num_approved_subtopics} subtemas, "
-            f"{total_sources} fuentes, ~{total_material_chars} chars de material): "
-            f"COMPLEX para síntesis profunda."
+            f"Significant workload ({num_approved_subtopics} subtopics, "
+            f"{total_sources} sources, ~{total_material_chars} chars of content): "
+            f"COMPLEX for deep synthesis."
         ),
     )
 
@@ -99,15 +88,15 @@ def classify_reporter(curated_content_length: int) -> RoutingDecision:
         return RoutingDecision(
             tier=ModelTier.SIMPLE,
             reason=(
-                f"Contenido curado muy corto ({curated_content_length} chars): "
-                f"SIMPLE alcanza para formatear."
+                f"Curated content very short ({curated_content_length} chars): "
+                f"SIMPLE is sufficient for formatting."
             ),
         )
 
     return RoutingDecision(
         tier=ModelTier.COMPLEX,
         reason=(
-            f"Contenido curado extenso ({curated_content_length} chars): "
-            f"COMPLEX para generar reporte coherente."
+            f"Curated content long ({curated_content_length} chars): "
+            f"COMPLEX for generating a coherent report."
         ),
     )

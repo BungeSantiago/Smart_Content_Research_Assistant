@@ -1,9 +1,3 @@
-"""
-Modelos de datos del sistema.
-
-Define el estado compartido que viaja entre los agentes en el grafo,
-y las estructuras de datos auxiliares (subtemas, fuentes, etc.).
-"""
 from datetime import datetime
 from enum import Enum
 from typing import Annotated
@@ -23,9 +17,9 @@ class Subtopic(BaseModel):
     """Un subtema de investigación propuesto por el Investigator."""
     model_config = ConfigDict(use_enum_values=True)
 
-    id: int = Field(..., description="ID único, comenzando en 1")
-    title: str = Field(..., min_length=3, description="Título del subtema")
-    rationale: str = Field(..., description="Por qué este subtema es relevante")
+    id: int = Field(..., description="Unique ID, starting at 1")
+    title: str = Field(..., min_length=3, description="Title of the subtopic")
+    rationale: str = Field(..., description="Why this subtopic is relevant")
     status: SubtopicStatus = SubtopicStatus.PROPOSED
 
 
@@ -33,8 +27,8 @@ class Source(BaseModel):
     """Fuente de información encontrada por el Investigator."""
     title: str
     url: str
-    snippet: str = Field(..., description="Resumen breve del contenido")
-    subtopic_id: int = Field(..., description="A qué subtema pertenece")
+    snippet: str = Field(..., description="Brief summary of the content")
+    subtopic_id: int = Field(..., description="Which subtopic it belongs to")
 
 
 class UsageEntry(BaseModel):
@@ -57,7 +51,7 @@ class ResearchState(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     # Input del usuario
-    topic: str = Field(..., description="Tema de investigación")
+    topic: str = Field(..., description="Research topic")
 
     # Salida del Investigator
     subtopics: list[Subtopic] = Field(default_factory=list)

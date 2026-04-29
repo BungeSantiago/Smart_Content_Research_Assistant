@@ -1,9 +1,3 @@
-"""
-Catálogo de precios de modelos.
-
-Precios en USD por millón de tokens. Fuente: https://groq.com/pricing/
-Última actualización: revisá la fuente periódicamente, los precios cambian.
-"""
 from dataclasses import dataclass
 
 

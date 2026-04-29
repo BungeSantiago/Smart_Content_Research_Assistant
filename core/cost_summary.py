@@ -14,17 +14,16 @@ def render_cost_summary(console: Console, usage_log: list[UsageEntry]) -> None:
         return
 
     table = Table(
-        title="[bold]Resumen de uso de modelos[/bold]",
+        title="[bold]Summary of model usage[/bold]",
         title_style="bold cyan",
         border_style="cyan",
         show_lines=False,
     )
-    table.add_column("Agente", style="bold")
-    table.add_column("Modelo", style="dim")
+    table.add_column("Agent", style="bold")
+    table.add_column("Model", style="dim")
     table.add_column("Input", justify="right")
     table.add_column("Output", justify="right")
-    table.add_column("Costo (USD)", justify="right", style="green")
-
+    table.add_column("Cost (USD)", justify="right", style="green")
     total_input = 0
     total_output = 0
     total_cost = 0.0
@@ -65,6 +64,6 @@ def render_cost_summary(console: Console, usage_log: list[UsageEntry]) -> None:
     if routing_lines:
         console.print(Panel(
             "\n".join(routing_lines),
-            title="[bold]Decisiones de routing[/bold]",
+            title="[bold]Routing Decisions[/bold]",
             border_style="dim",
         ))
