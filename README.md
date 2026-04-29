@@ -24,8 +24,6 @@ and presents the user with a transparent view of every routing decision.
 - [Usage](#usage)
 - [How the cost optimization works](#how-the-cost-optimization-works)
 - [Design decisions](#design-decisions)
-- [Trade-offs and limitations](#trade-offs-and-limitations)
-- [Future improvements](#future-improvements)
 - [Project structure](#project-structure)
 
 ---
@@ -276,42 +274,6 @@ same end result.
 
 ---
 
-## Trade-offs and limitations
-
-- **Source depth**: DuckDuckGo returns short snippets, not full page contents.
-  A production system would fetch the full HTML or use a search API designed
-  for agents (e.g., Tavily) to feed richer context to the Curator.
-- **Single search query**: the Investigator performs one search per topic. For
-  broad topics, a multi-query strategy (one per candidate subtopic) would
-  yield better coverage.
-- **Source attribution is LLM-trusted**: the Investigator chooses which
-  sources support each subtopic, but no automatic verification is performed.
-  A "Fact Checker" agent would close that loop.
-- **Cost estimation is approximate** for structured-output calls, since
-  LangChain's wrapper does not expose token usage directly in that path. A
-  character-based estimate (~4 chars/token) is used as a proxy.
-- **Memory checkpointing only**: state persists during a session but is not
-  durable across restarts. SQLite checkpointing is a one-line change in
-  `core/graph.py` if needed.
-
----
-
-## Future improvements
-
-- Multi-query search and full-page content extraction for richer context.
-- Fact Checker agent verifying that each source actually supports its
-  associated subtopic.
-- Dry-run mode that estimates the cost of a research before running it.
-- YAML-based configuration for models, thresholds, and prompts.
-- Streaming output for the Reporter to display the final report as it's
-  generated.
-- LLM-based fallback for the human input parser when regex doesn't capture
-  the intent.
-
-A full list lives in `TODO.md`.
-
----
-
 ## Project structure
 
 ```
@@ -351,4 +313,4 @@ MIT.
 
 ## Author
 
-Built by **Santiago Bunge** as part of an interview challenge.
+Built by **Santiago Bunge**.
